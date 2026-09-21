@@ -1,14 +1,14 @@
-# AirCard (Windows) 🎴
+# AirCard 🎴
 
 > **Apple Wallet Card Skinner & Lockscreen Passcode Themer for iOS 18+ (No Jailbreak Required)**  
-> Native Windows client written in Rust. Powered by the `airlift` AirTraffic sync exploit.
+> Native desktop client for Windows, macOS, and Linux, written in Rust. Powered by the `airlift` AirTraffic sync exploit.
 
 ---
 
 ## Features
 - 🎨 **Custom Card Skins:** Assign custom artwork, textures, or bank logos to Apple Pay and Apple Cash cards.
 - 🔢 **Lock Screen Passcode Themes (.passthm):** Apply custom keypad button artwork from popular Cowabunga & Nugget `.passthm` themes directly to iOS lockscreen.
-- ⚡ **100% Native & Lightweight:** Single standalone `aircard.exe` (~7.5 MB). No Python, no Flet, no webview, no bloated runtimes.
+- ⚡ **100% Native & Lightweight:** Native `aircard.exe` on Windows and `aircard` on macOS/Linux. No Python, no Flet, no webview, no bloated runtimes.
 - 🪟 **Material Design 3 Interface:** Clean, modern dark theme built with `egui` and `eframe`.
 - 📱 **Zero-Hassle Card Detection:** Tap any card in your iPhone's Wallet app while connected to detect its hash in real-time via `syslog_relay`.
 - 🔄 **Safe & Reversible:** Complete Books state snapshot and automatic restore engine — preserves original device state.
@@ -16,14 +16,27 @@
 
 ---
 
-## Requirements
-- **Windows 10 / 11 (64-bit)**
-- **Apple Mobile Device Support / 64-bit iTunes** (required for Apple USB communication drivers).
-- Standard Lightning or USB-C cable to connect your iPhone.
+## Platform support and requirements
+
+| Platform | Desktop previews and theme tools | iPhone scanning and applying changes | Runtime requirement |
+| --- | --- | --- | --- |
+| Windows 10/11 x64 | Yes | Native Apple backend | 64-bit iTunes / Apple Mobile Device Support |
+| macOS Intel / Apple Silicon | Yes | Native Apple backend | Built-in CoreFoundation, MobileDevice, and AirTrafficHost frameworks |
+| Linux x64 (X11 / Wayland) | Yes | Unavailable | Graphical desktop; an XDG desktop portal for file dialogs |
+
+**Linux support currently covers the desktop application, image preparation, and theme previews.**
+Apple's proprietary AirTrafficHost framework is not available on Linux; device scanning and applying
+skins/themes are disabled there with an explanation in the app. Installing `usbmuxd` or
+`libimobiledevice` alone does not supply the missing AirTraffic backend.
+
+For device operations on Windows/macOS, connect your iPhone with a Lightning or USB-C cable,
+unlock it, and trust the computer. On macOS, also accept the device in Finder. No iTunes
+installation is needed on macOS. Apple private framework compatibility and actual device
+operations depend on the installed macOS/iOS versions.
 
 ---
 
-## ⚠️ Troubleshooting & Driver Repair (If Nothing Works)
+## ⚠️ Windows Troubleshooting & Driver Repair (If Nothing Works)
 
 > [!TIP]
 > **iPhone not detected, AirTraffic sync hangs, or operation fails?**  
@@ -38,10 +51,18 @@
 
 ## Installation
 
-### Pre-built Executable
-1. Download **`aircard.exe`** from [Releases](https://github.com/Lumid-Off/AirCard-Windows/releases).
-2. Connect your iPhone via USB, unlock it, and tap **"Trust this Computer"** if prompted.
-3. Run **`aircard.exe`**.
+### Pre-built binaries
+
+Builds produced by the release workflow have these names:
+
+- Windows x64: `aircard.exe`
+- macOS Intel: `aircard-macos-x64.tar.gz`
+- macOS Apple Silicon: `aircard-macos-arm64.tar.gz`
+- Linux x64: `aircard-linux-x64.tar.gz` (desktop features only)
+
+Check [Releases](https://github.com/Lumid-Off/AirCard-Windows/releases) for available builds.
+Older releases may contain only the Windows executable. On macOS/Linux, extract the archive
+and run `./aircard`; on Windows, run `aircard.exe`.
 
 ---
 
@@ -76,21 +97,42 @@
 
 ## Building from Source
 
-Prerequisites: [Rust toolchain](https://rustup.rs/) (`stable-x86_64-pc-windows-msvc`).
+Install the current stable [Rust toolchain](https://rustup.rs/) for your host platform:
 
-```powershell
-# Clone the repository
-git clone https://github.com/Lumid-Off/AirCard-Windows.git
-cd AirCard-Windows
+- **Windows:** MSVC toolchain and Visual Studio C++ Build Tools.
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`). Rust builds for the
+  installed toolchain architecture; use `aarch64-apple-darwin` on Apple Silicon or
+  `x86_64-apple-darwin` on Intel.
+- **Linux (Ubuntu/Debian):** install the native build dependencies below. File dialogs
+  use the desktop's XDG portal (for example, `xdg-desktop-portal-gtk` on GTK desktops).
 
-# Run tests
-cargo test
-
-# Build release binary
-cargo build --release
+```sh
+sudo apt-get install build-essential pkg-config libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libwayland-dev libssl-dev
 ```
 
-The compiled binary will be in `target\release\aircard.exe`.
+The same build commands work on all three platforms:
+
+```sh
+git clone https://github.com/Lumid-Off/AirCard-Windows.git
+cd AirCard-Windows
+cargo test --locked
+cargo build --release --locked
+```
+
+Output: `target/release/aircard.exe` on Windows, `target/release/aircard` on macOS/Linux.
+CI builds and tests Windows x64, Linux x64, macOS Intel, and macOS Apple Silicon separately.
+Hardware-dependent tests are ignored by default. To check the macOS framework loader
+without accessing a phone:
+
+```sh
+cargo test native_frameworks_and_plist_round_trip -- --ignored
+```
+
+Saved card data is stored in:
+
+- Windows: `%LOCALAPPDATA%\AirCard\cards.json`
+- macOS: `~/Library/Application Support/AirCard/cards.json`
+- Linux: `$XDG_DATA_HOME/AirCard/cards.json`, or `~/.local/share/AirCard/cards.json`.
 
 ---
 
