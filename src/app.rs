@@ -9,7 +9,7 @@ use eframe::egui;
 use crate::apple;
 use crate::device::{DeviceInfo, list_connected_devices};
 use crate::flasher::{flash_passcode_theme, flash_wallet_skin};
-use crate::image_skin::PreparedSkin;
+use crate::image_skin::{ImagePlacement, SkinEditor, CARD_WIDTH, CARD_HEIGHT};
 use crate::passthm::{PasscodeTheme, parse_passthm_file};
 use crate::scanner::{SavedCard, load_saved_cards, scan_syslog_for_cards};
 
@@ -83,7 +83,7 @@ pub struct AirCardApp {
     card_hash: String,
     saved_cards: Vec<SavedCard>,
     source_path: Option<PathBuf>,
-    skin: Option<PreparedSkin>,
+    skin: Option<SkinEditor>,
     skin_texture: Option<egui::TextureHandle>,
     scanning_syslog: bool,
     scan_stop_flag: Option<Arc<AtomicBool>>,
@@ -223,26 +223,15 @@ impl AirCardApp {
         };
 
         self.add_log(format!("Opening skin image: {}", path.display()));
-        match PreparedSkin::from_path(&path) {
+        match SkinEditor::from_path(&path) {
             Ok(skin) => {
-                self.add_log(format!(
-                    "Skin processed: source {}x{} resampled to 1536x969 PNG ({:.1} KB)",
-                    skin.source_width,
-                    skin.source_height,
-                    skin.png.len() as f32 / 1024.0,
-                ));
+                let size = skin.source_size();
                 self.skin_texture = Some(ctx.load_texture(
-                    "card-skin-preview",
-                    skin.preview.clone(),
-                    egui::TextureOptions::LINEAR,
+                    "card-skin-source", skin.preview(), egui::TextureOptions::LINEAR,
                 ));
-                self.status_msg = format!(
-                    "Prepared {} ({}x{} -> 1536x969 PNG, {:.1} KB)",
-                    path.file_name().and_then(|n| n.to_str()).unwrap_or("image"),
-                    skin.source_width,
-                    skin.source_height,
-                    skin.png.len() as f32 / 1024.0,
-                );
+                self.status_msg = format!("Loaded {} ({}x{}). Drag and zoom the preview to frame your card.",
+                    path.file_name().and_then(|n| n.to_str()).unwrap_or("image"), size.x, size.y);
+                self.add_log(self.status_msg.clone());
                 self.source_path = Some(path);
                 self.skin = Some(skin);
             }
@@ -254,18 +243,16 @@ impl AirCardApp {
     }
 
     fn save_prepared_png(&mut self) {
-        let Some(skin) = &self.skin else {
-            return;
-        };
+        let Some(skin) = &self.skin else { return; };
         let Some(path) = rfd::FileDialog::new()
-            .set_file_name("aircard-skin.png")
-            .save_file()
-        else {
-            return;
-        };
-        match std::fs::write(&path, &skin.png) {
+            .set_file_name("aircard-skin.png").save_file()
+        else { return; };
+        let result = skin.prepare().and_then(|prepared| {
+            std::fs::write(&path, &prepared.png).map_err(anyhow::Error::from)
+        });
+        match result {
             Ok(()) => {
-                self.add_log(format!("Exported prepared card skin PNG: {}", path.display()));
+                self.add_log(format!("Exported adjusted card skin PNG: {}", path.display()));
                 self.status_msg = format!("Saved prepared PNG: {}", path.display());
             }
             Err(err) => {
@@ -338,8 +325,16 @@ impl AirCardApp {
             return;
         };
 
-        let png_bytes = skin.png.clone();
-        let pdf_bytes = skin.pdf.clone();
+        let prepared = match skin.prepare() {
+            Ok(prepared) => prepared,
+            Err(err) => {
+                self.status_msg = format!("Could not prepare adjusted artwork: {err:#}");
+                self.add_log(self.status_msg.clone());
+                return;
+            }
+        };
+        let png_bytes = prepared.png;
+        let pdf_bytes = prepared.pdf;
         if let Some(ref flag) = self.scan_stop_flag {
             flag.store(true, std::sync::atomic::Ordering::Relaxed);
         }
@@ -961,20 +956,22 @@ impl AirCardApp {
 
                 // Card Skin
                 ui.label(egui::RichText::new("Card Skin Artwork").strong().size(12.0).color(md3::ON_SURFACE));
-                ui.label(egui::RichText::new("PNG, JPG, WebP - auto-scaled to 1536x969").size(11.0).color(md3::ON_SURFACE_VARIANT));
+                ui.label(egui::RichText::new("PNG, JPG, WebP - drag and zoom to frame your card").size(11.0).color(md3::ON_SURFACE_VARIANT));
                 ui.add_space(4.0);
-                ui.horizontal(|ui| {
-                    if m3_button_filled(ui, "Choose Image...") { self.select_skin(ctx); }
-                    if self.skin.is_some() {
-                        if m3_button_tonal(ui, "Export PNG") { self.save_prepared_png(); }
-                    }
+                ui.add_enabled_ui(!self.is_busy, |ui| {
+                    ui.horizontal(|ui| {
+                        if m3_button_filled(ui, "Choose Image...") { self.select_skin(ctx); }
+                        if self.skin.is_some() {
+                            if m3_button_tonal(ui, "Export PNG") { self.save_prepared_png(); }
+                        }
+                    });
                 });
 
                 if let Some(skin) = &self.skin {
                     ui.add_space(4.0);
                     let fname = self.source_path.as_ref()
                         .and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("image");
-                    ui.label(egui::RichText::new(format!("{} - 1536x969 - {:.0} KB", fname, skin.png.len() as f32 / 1024.0)).size(11.0).color(md3::PRIMARY));
+                    ui.label(egui::RichText::new(format!("{} - source {}x{}", fname, skin.source_size().x, skin.source_size().y)).size(11.0).color(md3::PRIMARY));
                 }
 
                 ui.add_space(16.0);
@@ -1019,23 +1016,8 @@ impl AirCardApp {
                 ui.label(egui::RichText::new("1536 x 969 px pass canvas").size(12.0).color(md3::ON_SURFACE_VARIANT));
                 ui.add_space(12.0);
 
-                let pass_w = (ui.available_width() - 8.0).clamp(250.0, 400.0);
-                let pass_h = pass_w * (969.0 / 1536.0);
-                ui.vertical_centered(|ui| {
-                    let (rect, _) = ui.allocate_exact_size(egui::vec2(pass_w, pass_h), egui::Sense::hover());
-                    let painter = ui.painter();
-                    if let Some(tex) = self.skin_texture.as_ref() {
-                        painter.image(tex.id(), rect,
-                            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                            egui::Color32::WHITE);
-                        painter.rect_stroke(rect, 16.0,
-                            egui::Stroke::new(1.0_f32, egui::Color32::from_rgba_premultiplied(255, 255, 255, 30)),
-                            egui::StrokeKind::Inside);
-                    } else {
-                        painter.rect_filled(rect, 16.0, md3::SURFACE_CONTAINER_HIGH);
-                        painter.text(rect.center(), egui::Align2::CENTER_CENTER,
-                            "No artwork loaded", egui::FontId::proportional(14.0), md3::ON_SURFACE_VARIANT);
-                    }
+                ui.add_enabled_ui(!self.is_busy, |ui| {
+                    self.show_skin_editor(ui);
                 });
 
                 ui.add_space(12.0);
@@ -1053,6 +1035,72 @@ impl AirCardApp {
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new("After applying, force close Apple Wallet and reopen it.").size(11.0).color(md3::ON_SURFACE_VARIANT));
             });
+        });
+    }
+
+    fn show_skin_editor(&mut self, ui: &mut egui::Ui) {
+        // Never force a minimum larger than the available preview column.
+        let width = (ui.available_width() - 8.0).clamp(1.0, 400.0);
+        let size = egui::vec2(width, width * CARD_HEIGHT as f32 / CARD_WIDTH as f32);
+        if let Some(skin) = self.skin.as_mut() {
+            let source = skin.source_size();
+            let minimum = ImagePlacement::fit_zoom(source);
+            let mut percent = skin.placement.zoom * 100.0;
+            ui.add(egui::Slider::new(&mut percent, minimum * 100.0..=800.0)
+                .logarithmic(true).suffix("%").text("Zoom"));
+            skin.placement.zoom = percent / 100.0;
+            ui.horizontal(|ui| {
+                if ui.button("Fit Image").on_hover_text("Show the whole image; empty space is black").clicked() {
+                    skin.placement = ImagePlacement { zoom: minimum, ..Default::default() };
+                }
+                if ui.button("Center").clicked() { skin.placement.offset = egui::Vec2::ZERO; }
+                if ui.button("Reset / Fill").clicked() { skin.placement = ImagePlacement::default(); }
+            });
+            skin.placement.constrain(source);
+            let image_size = skin.placement.image_rect(source).size();
+            let x_limit = (image_size.x / CARD_WIDTH as f32 - 1.0).abs() * 50.0;
+            let y_limit = (image_size.y / CARD_HEIGHT as f32 - 1.0).abs() * 50.0;
+            let mut x = skin.placement.offset.x * 100.0;
+            let mut y = skin.placement.offset.y * 100.0;
+            ui.horizontal(|ui| {
+                ui.label("Position");
+                ui.add_enabled(x_limit > 0.01, egui::DragValue::new(&mut x)
+                    .range(-x_limit..=x_limit).speed(0.5).prefix("X ").suffix("%"))
+                    .on_hover_text("Horizontal position: drag the value or click to type");
+                ui.add_enabled(y_limit > 0.01, egui::DragValue::new(&mut y)
+                    .range(-y_limit..=y_limit).speed(0.5).prefix("Y ").suffix("%"))
+                    .on_hover_text("Vertical position: drag the value or click to type");
+            });
+            skin.placement.offset = egui::vec2(x, y) / 100.0;
+            skin.placement.constrain(source);
+            ui.label(egui::RichText::new("Drag the image to reposition it. Use Zoom to resize.")
+                .size(11.0).color(md3::ON_SURFACE_VARIANT));
+            ui.add_space(8.0);
+        }
+        ui.vertical_centered(|ui| {
+            let (rect, response) = ui.allocate_exact_size(size, egui::Sense::drag());
+            if let (Some(skin), Some(texture)) = (self.skin.as_mut(), self.skin_texture.as_ref()) {
+                if response.dragged() {
+                    skin.placement.offset += response.drag_delta() / rect.size();
+                    skin.placement.constrain(skin.source_size());
+                }
+                response.on_hover_cursor(egui::CursorIcon::Grab)
+                    .on_hover_text("Drag to move the image inside the card");
+                let image_rect = skin.placement.image_rect(skin.source_size());
+                let scale = rect.width() / CARD_WIDTH as f32;
+                let destination = egui::Rect::from_min_size(
+                    rect.min + image_rect.min.to_vec2() * scale, image_rect.size() * scale);
+                let painter = ui.painter().with_clip_rect(rect.intersect(ui.clip_rect()));
+                painter.rect_filled(rect, 0.0, egui::Color32::BLACK);
+                painter.image(texture.id(), destination,
+                    egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)), egui::Color32::WHITE);
+                painter.rect_stroke(rect, 0.0,
+                    egui::Stroke::new(1.0, md3::OUTLINE_VARIANT), egui::StrokeKind::Inside);
+            } else {
+                ui.painter().rect_filled(rect, 16.0, md3::SURFACE_CONTAINER_HIGH);
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER,
+                    "No artwork loaded", egui::FontId::proportional(14.0), md3::ON_SURFACE_VARIANT);
+            }
         });
     }
 
