@@ -87,10 +87,11 @@ If both transports are available, **Auto** uses USB first and falls back to WiFi
    - Open **Apple Wallet** (or double-click the Side/Power button).
    - Tap the card you want to customize.
    - AirCard intercepts and saves the card hash automatically. Click **Stop**.
-4. Click **Choose Image...** to pick your artwork (PNG, JPG, or WebP — drag inside the preview to position the crop, then scale it to `1536 × 969`).
-5. Click **Apply Card Skin**.
-6. Force-close the **Wallet** app on your iPhone from the App Switcher (swipe up from bottom, then swipe Wallet away) and reopen Wallet to see your new card!
+4. Click **Choose Image...** to pick your artwork (PNG, JPG, or WebP).
+5. In **Wallet Preview**, drag the image to reposition it and adjust **Zoom** to resize it. Use **Position X / Y** for precise offsets. **Fit Image** shows the entire image with black margins; **Center** recenters it, and **Reset / Fill** restores the default centered crop.
+6. Click **Apply Card Skin**. The current framing is used for both device artwork and **Export PNG**, at `1536 × 969`.
 7. The first apply stores a local backup of the original card face. Use **Restore Original** later to write it back and invalidate Wallet's cached artwork.
+8. Force-close the **Wallet** app on your iPhone from the App Switcher (swipe up from bottom, then swipe Wallet away) and reopen Wallet to see your new card!
 
 ---
 
