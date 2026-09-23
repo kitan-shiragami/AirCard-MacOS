@@ -60,7 +60,7 @@ Builds produced by the release workflow have these names:
 - macOS Apple Silicon: `aircard-macos-arm64.dmg`
 - Linux x64: `aircard-linux-x64.tar.gz` (desktop features only)
 
-Check [Releases](https://github.com/kitan-shiragami/AirCard-Windows/releases) for available builds.
+Check [Releases](https://github.com/kitan-shiragami/AirCard-MacOS/releases) for available builds.
 Older releases may contain only the Windows executable or macOS tar archives.
 On macOS, open the DMG for your processor, drag **AirCard.app** to **Applications**,
 then eject the disk image and open AirCard from Applications.
@@ -120,8 +120,8 @@ sudo apt-get install build-essential pkg-config libxcb-render0-dev libxcb-shape0
 The same build commands work on all three platforms:
 
 ```sh
-git clone https://github.com/kitan-shiragami/AirCard-Windows.git
-cd AirCard-Windows
+git clone https://github.com/kitan-shiragami/AirCard-MacOS.git
+cd AirCard-MacOS
 cargo test --locked
 cargo build --release --locked
 ```
