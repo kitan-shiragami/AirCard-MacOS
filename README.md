@@ -1,5 +1,7 @@
 # AirCard 🎴
 
+[![Build Releases](https://github.com/kitan-shiragami/AirCard-MacOS/actions/workflows/build.yml/badge.svg)](https://github.com/kitan-shiragami/AirCard-MacOS/actions/workflows/build.yml)
+
 > **Apple Wallet Card Skinner & Lockscreen Passcode Themer for iOS 18+ (No Jailbreak Required)**  
 > Native desktop client for Windows, macOS, and Linux, written in Rust. Powered by the `airlift` AirTraffic sync exploit.
 
