@@ -13,6 +13,7 @@
 - ⚡ **100% Native & Lightweight:** Native `aircard.exe` on Windows and `aircard` on macOS/Linux. No Python, no Flet, no webview, no bloated runtimes.
 - 🪟 **Material Design 3 Interface:** Clean, modern dark theme built with `egui` and `eframe`.
 - 📱 **Zero-Hassle Card Detection:** Tap any card in your iPhone's Wallet app while connected to detect its hash in real-time via `syslog_relay`.
+- 📶 **USB & WiFi Transport:** Scan card events and apply Wallet or passcode assets through USB or a paired local WiFi connection.
 - 🔄 **Safe & Reversible:** Complete Books state snapshot and automatic restore engine — preserves original device state.
 - 🚀 **Zero Jailbreak:** Utilizes Apple's built-in AirTraffic sync conduit without modifying system partitions or disabling security.
 
@@ -22,8 +23,8 @@
 
 | Platform | Desktop previews and theme tools | iPhone scanning and applying changes | Runtime requirement |
 | --- | --- | --- | --- |
-| Windows 10/11 x64 | Yes | Native Apple backend | 64-bit iTunes / Apple Mobile Device Support |
-| macOS Intel / Apple Silicon | Yes | Native Apple backend | Built-in CoreFoundation, MobileDevice, and AirTrafficHost frameworks |
+| Windows 10/11 x64 | Yes | Native Apple backend over USB or paired WiFi | 64-bit iTunes / Apple Mobile Device Support |
+| macOS Intel / Apple Silicon | Yes | Native Apple backend over USB or paired WiFi | Built-in CoreFoundation, MobileDevice, and AirTrafficHost frameworks |
 | Linux x64 (X11 / Wayland) | Yes | Unavailable | Graphical desktop; an XDG desktop portal for file dialogs |
 
 **Linux support currently covers the desktop application, image preparation, and theme previews.**
@@ -31,10 +32,11 @@ Apple's proprietary AirTrafficHost framework is not available on Linux; device s
 skins/themes are disabled there with an explanation in the app. Installing `usbmuxd` or
 `libimobiledevice` alone does not supply the missing AirTraffic backend.
 
-For device operations on Windows/macOS, connect your iPhone with a Lightning or USB-C cable,
-unlock it, and trust the computer. On macOS, also accept the device in Finder. No iTunes
-installation is needed on macOS. Apple private framework compatibility and actual device
-operations depend on the installed macOS/iOS versions.
+For device operations on Windows/macOS, connect your iPhone with a Lightning or USB-C cable
+for the initial pairing, unlock it, and trust the computer. On macOS, also accept the device
+in Finder. No iTunes installation is needed on macOS. For WiFi mode, enable WiFi sync and keep
+the computer and iPhone on the same local network. Apple private framework compatibility and
+actual device operations depend on the installed macOS/iOS versions.
 
 ---
 
@@ -74,8 +76,19 @@ with a verified developer identity requires Developer ID signing and Apple notar
 
 ---
 
+## WiFi Connection Setup
+1. Connect the iPhone by USB for the initial pairing.
+2. In Finder on macOS, or Apple Devices/iTunes on Windows, enable **Show this iPhone when on Wi-Fi** / **Sync with this iPhone over Wi-Fi**.
+3. Apply the setting, then keep the iPhone and PC on the same local network.
+4. In AirCard, click **Refresh** and confirm the device shows a **WiFi** transport.
+5. Disconnect the cable, click **Refresh** again, and select **WiFi only**. Use **Auto (USB preferred)** when automatic fallback is desired.
+
+If both transports are available, **Auto** uses USB first and falls back to WiFi. For a guaranteed end-to-end WiFi route, disconnect the USB cable, click **Refresh**, and then choose **WiFi only**. This is required because Apple's AirTraffic API selects its route by UDID rather than accepting a transport parameter.
+
+---
+
 ## How to Customize Apple Wallet Cards
-1. Connect your iPhone to your PC via USB and ensure it is unlocked.
+1. Connect your iPhone through USB or paired WiFi and ensure it is unlocked.
 2. In AirCard, stay on the **Wallet** tab and click **Scan**.
 3. On your iPhone:
    - Open **Apple Wallet** (or double-click the Side/Power button).

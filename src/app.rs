@@ -7,7 +7,7 @@ use std::thread;
 use eframe::egui;
 
 use crate::apple;
-use crate::device::{DeviceInfo, list_connected_devices};
+use crate::device::{ConnectionMode, DeviceInfo, DeviceTransport, list_connected_devices};
 use crate::flasher::{flash_passcode_theme, flash_wallet_skin};
 use crate::image_skin::{ImagePlacement, SkinEditor, CARD_WIDTH, CARD_HEIGHT};
 use crate::passthm::{PasscodeTheme, parse_passthm_file};
@@ -78,6 +78,7 @@ pub struct AirCardApp {
     // Device management
     devices: Vec<DeviceInfo>,
     selected_udid: Option<String>,
+    connection_mode: ConnectionMode,
 
     // Wallet tab
     card_hash: String,
@@ -124,6 +125,7 @@ impl AirCardApp {
 
             devices: Vec::new(),
             selected_udid: None,
+            connection_mode: ConnectionMode::Auto,
 
             card_hash: String::new(),
             saved_cards: load_saved_cards(),
@@ -144,7 +146,7 @@ impl AirCardApp {
             progress_step: 0,
             progress_total: 0,
             progress_msg: String::new(),
-            status_msg: "Ready. Connect iPhone via USB and unlock it.".to_string(),
+            status_msg: "Ready. Connect iPhone via USB or paired WiFi and unlock it.".to_string(),
             task_rx: None,
             logs: Vec::new(),
             show_logs_window: false,
@@ -191,12 +193,18 @@ impl AirCardApp {
         match list_connected_devices() {
             Ok(devs) => {
                 self.devices = devs;
-                if self.selected_udid.is_none() && !self.devices.is_empty() {
+                let selection_still_exists = self.selected_udid.as_ref().is_some_and(|selected| {
+                    self.devices
+                        .iter()
+                        .any(|device| device.udid.eq_ignore_ascii_case(selected))
+                });
+                if !selection_still_exists && !self.devices.is_empty() {
                     self.selected_udid = Some(self.devices[0].udid.clone());
                 }
                 if self.devices.is_empty() {
-                    self.add_log("No devices detected. Please plug in your iPhone and tap 'Trust this Computer'.");
-                    self.status_msg = "No devices connected via USB.".to_string();
+                    self.selected_udid = None;
+                    self.add_log("No devices detected. Connect by USB, or enable WiFi sync after initial USB pairing.");
+                    self.status_msg = "No iPhone connected via USB or paired WiFi.".to_string();
                 } else {
                     let dev_logs: Vec<String> = self.devices.iter().enumerate().map(|(i, d)| {
                         format!("Device #{}: {} - UDID: {}", i + 1, d, d.udid)
@@ -204,7 +212,11 @@ impl AirCardApp {
                     for line in dev_logs {
                         self.add_log(line);
                     }
-                    self.status_msg = format!("Found {} connected device(s)", self.devices.len());
+                    self.status_msg = format!(
+                        "Found {} connected device(s); transport mode: {}",
+                        self.devices.len(),
+                        self.connection_mode.label()
+                    );
                 }
             }
             Err(err) => {
@@ -212,6 +224,55 @@ impl AirCardApp {
                 self.status_msg = format!("Could not enumerate devices: {}", err);
             }
         }
+    }
+
+    fn selected_transport_available(&self) -> bool {
+        self.selected_udid.as_ref().is_some_and(|selected| {
+            self.devices.iter().any(|device| {
+                if !device.udid.eq_ignore_ascii_case(selected) {
+                    return false;
+                }
+                if self.connection_mode == ConnectionMode::Wifi {
+                    return device.has_transport(DeviceTransport::Wifi)
+                        && !device.has_transport(DeviceTransport::Usb);
+                }
+                device.supports(self.connection_mode)
+            })
+        })
+    }
+
+    fn validate_selected_transport(&mut self, operation: &str) -> bool {
+        if self.selected_udid.is_none() {
+            self.add_log(format!("{} failed: No connected iPhone selected.", operation));
+            self.status_msg = "Please select a connected iPhone.".to_string();
+            return false;
+        }
+        if !self.selected_transport_available() {
+            let wifi_has_usb_attached = self.connection_mode == ConnectionMode::Wifi
+                && self.selected_udid.as_ref().is_some_and(|selected| {
+                    self.devices.iter().any(|device| {
+                        device.udid.eq_ignore_ascii_case(selected)
+                            && device.has_transport(DeviceTransport::Wifi)
+                            && device.has_transport(DeviceTransport::Usb)
+                    })
+                });
+            self.add_log(format!(
+                "{} failed: Selected device is unavailable in {} mode.",
+                operation,
+                self.connection_mode.label()
+            ));
+            self.status_msg = if wifi_has_usb_attached {
+                "Disconnect the USB cable and refresh to guarantee the full AirTraffic path uses WiFi."
+                    .to_string()
+            } else {
+                format!(
+                    "Selected iPhone has no {} connection. Refresh devices or change transport mode.",
+                    self.connection_mode.label()
+                )
+            };
+            return false;
+        }
+        true
     }
 
     fn select_skin(&mut self, ctx: &egui::Context) {
@@ -273,6 +334,10 @@ impl AirCardApp {
             return;
         }
 
+        if !self.validate_selected_transport("Syslog scan") {
+            return;
+        }
+
         let stop_flag = Arc::new(AtomicBool::new(false));
         self.scan_stop_flag = Some(Arc::clone(&stop_flag));
         self.scanning_syslog = true;
@@ -282,12 +347,14 @@ impl AirCardApp {
         let (tx, rx) = channel();
         self.task_rx = Some(rx);
         let udid = self.selected_udid.clone();
+        let connection_mode = self.connection_mode;
 
         thread::spawn(move || {
             let tx_card = tx.clone();
             let tx_log = tx.clone();
             let res = scan_syslog_for_cards(
                 udid.as_deref(),
+                connection_mode,
                 stop_flag,
                 move |hash, name| {
                     let _ = tx_card.send(BackgroundTaskMessage::CardFound { hash, name });
@@ -308,9 +375,10 @@ impl AirCardApp {
     }
 
     fn flash_card(&mut self) {
+        if !self.validate_selected_transport("Card flash") {
+            return;
+        }
         let Some(udid) = self.selected_udid.clone() else {
-            self.add_log("Flash failed: No connected iPhone selected.");
-            self.status_msg = "Please select a connected iPhone.".to_string();
             return;
         };
         let hash = self.card_hash.trim().to_string();
@@ -344,7 +412,13 @@ impl AirCardApp {
         self.progress_total = 3;
         self.progress_msg = "Initiating card flash...".to_string();
         self.status_msg = "Writing card skin to iPhone...".to_string();
-        self.add_log(format!("Starting card skin flash for hash: {} (UDID: {})", hash, udid));
+        let connection_mode = self.connection_mode;
+        self.add_log(format!(
+            "Starting card skin flash for hash: {} (UDID: {}, transport: {})",
+            hash,
+            udid,
+            connection_mode.label()
+        ));
 
         let (tx, rx) = channel();
         self.task_rx = Some(rx);
@@ -354,6 +428,7 @@ impl AirCardApp {
             let tx_log = tx.clone();
             let res = flash_wallet_skin(
                 &udid,
+                connection_mode,
                 &hash,
                 &png_bytes,
                 &pdf_bytes,
@@ -449,9 +524,10 @@ impl AirCardApp {
     }
 
     fn flash_theme(&mut self) {
+        if !self.validate_selected_transport("Theme flash") {
+            return;
+        }
         let Some(udid) = self.selected_udid.clone() else {
-            self.add_log("Theme flash failed: No connected iPhone selected.");
-            self.status_msg = "Please select a connected iPhone.".to_string();
             return;
         };
         let Some(theme) = self.loaded_theme.as_ref() else {
@@ -466,7 +542,14 @@ impl AirCardApp {
         self.progress_total = items.len();
         self.progress_msg = "Starting passcode theme flash...".to_string();
         self.status_msg = "Writing passcode theme buttons...".to_string();
-        self.add_log(format!("Flashing passcode theme '{}' ({} button assets) to device {}", theme.name, items.len(), udid));
+        let connection_mode = self.connection_mode;
+        self.add_log(format!(
+            "Flashing passcode theme '{}' ({} button assets) to device {} over {}",
+            theme.name,
+            items.len(),
+            udid,
+            connection_mode.label()
+        ));
 
         let (tx, rx) = channel();
         self.task_rx = Some(rx);
@@ -476,6 +559,7 @@ impl AirCardApp {
             let tx_log = tx.clone();
             let res = flash_passcode_theme(
                 &udid,
+                connection_mode,
                 &items,
                 move |step, total, msg| {
                     let _ = tx_progress.send(BackgroundTaskMessage::Progress {
@@ -740,19 +824,75 @@ impl eframe::App for AirCardApp {
                             self.refresh_devices();
                         }
                         ui.add_space(4.0);
-                        let has_device = !self.devices.is_empty();
-                        draw_status_dot(ui, if has_device { md3::SUCCESS } else { md3::ERROR });
-                        if has_device {
-                            let name = self.devices.iter()
-                                .find(|d| Some(&d.udid) == self.selected_udid.as_ref())
-                                .map(|d| d.name.clone())
-                                .unwrap_or_else(|| "iPhone".into());
-                            ui.label(egui::RichText::new(name).size(12.0).color(md3::ON_SURFACE))
-                                .on_hover_text(&self.apple_status);
-                        } else {
-                            ui.label(egui::RichText::new("No device").size(12.0).color(md3::ON_SURFACE_VARIANT))
-                                .on_hover_text(&self.apple_status);
+                        let controls_enabled = !self.is_busy && !self.scanning_syslog;
+                        let mut next_mode = self.connection_mode;
+                        ui.add_enabled_ui(controls_enabled, |ui| {
+                            egui::ComboBox::from_id_salt("connection_mode_combo")
+                                .selected_text(next_mode.label())
+                                .width(145.0)
+                                .show_ui(ui, |ui| {
+                                    for mode in ConnectionMode::ALL {
+                                        ui.selectable_value(&mut next_mode, mode, mode.label());
+                                    }
+                                });
+                        });
+                        if next_mode != self.connection_mode {
+                            self.connection_mode = next_mode;
+                            self.add_log(format!(
+                                "Transport mode changed to {}.",
+                                self.connection_mode.label()
+                            ));
+                            self.status_msg = format!(
+                                "Transport mode: {}",
+                                self.connection_mode.label()
+                            );
                         }
+
+                        ui.add_space(4.0);
+                        let mut next_udid = self.selected_udid.clone();
+                        let selected_label = self
+                            .devices
+                            .iter()
+                            .find(|device| Some(&device.udid) == self.selected_udid.as_ref())
+                            .map(|device| format!("{} [{}]", device.name, device.transport_summary()))
+                            .unwrap_or_else(|| "No device".to_string());
+                        ui.add_enabled_ui(controls_enabled && !self.devices.is_empty(), |ui| {
+                            egui::ComboBox::from_id_salt("device_selector_combo")
+                                .selected_text(selected_label)
+                                .width(185.0)
+                                .show_ui(ui, |ui| {
+                                    for device in &self.devices {
+                                        ui.selectable_value(
+                                            &mut next_udid,
+                                            Some(device.udid.clone()),
+                                            format!("{} [{}]", device.name, device.transport_summary()),
+                                        );
+                                    }
+                                });
+                        });
+                        if next_udid != self.selected_udid {
+                            self.selected_udid = next_udid;
+                            if let Some(selected) = self.selected_udid.clone() {
+                                self.add_log(format!("Selected device: {}", selected));
+                            }
+                        }
+
+                        ui.add_space(4.0);
+                        let connection_ready = self.selected_transport_available();
+                        draw_status_dot(
+                            ui,
+                            if connection_ready { md3::SUCCESS } else { md3::ERROR },
+                        );
+                        ui.label(
+                            egui::RichText::new(if connection_ready { "Ready" } else { "Unavailable" })
+                                .size(12.0)
+                                .color(if connection_ready {
+                                    md3::ON_SURFACE
+                                } else {
+                                    md3::ON_SURFACE_VARIANT
+                                }),
+                        )
+                        .on_hover_text(&self.apple_status);
                     });
                 });
             });
@@ -980,7 +1120,11 @@ impl AirCardApp {
                 ui.label(egui::RichText::new("Write to iPhone").strong().size(12.0).color(md3::ON_SURFACE));
                 ui.add_space(4.0);
 
-                let can_flash = self.apple_ready && !self.is_busy && self.selected_udid.is_some() && !self.card_hash.trim().is_empty() && self.skin.is_some();
+                let can_flash = self.apple_ready
+                    && !self.is_busy
+                    && self.selected_transport_available()
+                    && !self.card_hash.trim().is_empty()
+                    && self.skin.is_some();
                 let flash_btn = egui::Button::new(
                     egui::RichText::new("Apply Card Skin").strong().size(14.0)
                         .color(if can_flash { md3::ON_PRIMARY } else { md3::ON_SURFACE_VARIANT }),
@@ -994,6 +1138,7 @@ impl AirCardApp {
                 if !can_flash {
                     let mut r = Vec::new();
                     if self.selected_udid.is_none() { r.push("connect iPhone"); }
+                    else if !self.selected_transport_available() { r.push("choose available transport"); }
                     if self.card_hash.trim().is_empty() { r.push("enter card hash"); }
                     if self.skin.is_none() { r.push("choose image"); }
                     if !r.is_empty() { resp.on_disabled_hover_text(format!("Need: {}", r.join(", "))); }
@@ -1202,7 +1347,10 @@ impl AirCardApp {
                 ui.label(egui::RichText::new("Write to iPhone").strong().size(12.0).color(md3::ON_SURFACE));
                 ui.add_space(4.0);
 
-                let can_flash = self.apple_ready && !self.is_busy && self.selected_udid.is_some() && self.loaded_theme.is_some();
+                let can_flash = self.apple_ready
+                    && !self.is_busy
+                    && self.selected_transport_available()
+                    && self.loaded_theme.is_some();
                 let flash_btn = egui::Button::new(
                     egui::RichText::new("Apply Passcode Theme").strong().size(14.0)
                         .color(if can_flash { md3::ON_PRIMARY } else { md3::ON_SURFACE_VARIANT }),
@@ -1216,6 +1364,7 @@ impl AirCardApp {
                 if !can_flash {
                     let mut r = Vec::new();
                     if self.selected_udid.is_none() { r.push("connect iPhone"); }
+                    else if !self.selected_transport_available() { r.push("choose available transport"); }
                     if self.loaded_theme.is_none() { r.push("select theme"); }
                     if !r.is_empty() { resp.on_disabled_hover_text(format!("Need: {}", r.join(", "))); }
                 }
@@ -1330,8 +1479,9 @@ impl AirCardApp {
                 ui.add_space(6.0);
                 ui.label(egui::RichText::new(crate::platform::device_setup_help()).size(11.5).color(md3::ON_SURFACE_VARIANT));
                 ui.label(egui::RichText::new(&self.apple_status).size(11.5).color(md3::ON_SURFACE_VARIANT));
-                ui.label(egui::RichText::new("- Connect iPhone via USB-C or Lightning cable").size(11.5).color(md3::ON_SURFACE_VARIANT));
-                ui.label(egui::RichText::new("- Unlock iPhone and tap \"Trust this Computer\"").size(11.5).color(md3::ON_SURFACE_VARIANT));
+                ui.label(egui::RichText::new("- First-time setup: connect by USB and tap \"Trust this Computer\"").size(11.5).color(md3::ON_SURFACE_VARIANT));
+                ui.label(egui::RichText::new("- WiFi: enable WiFi sync, then use the same local network").size(11.5).color(md3::ON_SURFACE_VARIANT));
+                ui.label(egui::RichText::new("- Select Auto, USB only, or WiFi only in the top bar").size(11.5).color(md3::ON_SURFACE_VARIANT));
 
                 ui.add_space(18.0);
 
