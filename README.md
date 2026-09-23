@@ -56,13 +56,19 @@ operations depend on the installed macOS/iOS versions.
 Builds produced by the release workflow have these names:
 
 - Windows x64: `aircard.exe`
-- macOS Intel: `aircard-macos-x64.tar.gz`
-- macOS Apple Silicon: `aircard-macos-arm64.tar.gz`
+- macOS Intel: `aircard-macos-x64.dmg`
+- macOS Apple Silicon: `aircard-macos-arm64.dmg`
 - Linux x64: `aircard-linux-x64.tar.gz` (desktop features only)
 
-Check [Releases](https://github.com/Lumid-Off/AirCard-Windows/releases) for available builds.
-Older releases may contain only the Windows executable. On macOS/Linux, extract the archive
-and run `./aircard`; on Windows, run `aircard.exe`.
+Check [Releases](https://github.com/kitan-shiragami/AirCard-Windows/releases) for available builds.
+Older releases may contain only the Windows executable or macOS tar archives.
+On macOS, open the DMG for your processor, drag **AirCard.app** to **Applications**,
+then eject the disk image and open AirCard from Applications.
+On Linux, extract the archive and run `./aircard`; on Windows, run `aircard.exe`.
+
+The macOS app currently uses an ad-hoc signature. It is **not Developer ID signed or
+notarized by Apple**, so downloaded builds may be blocked by Gatekeeper. Public distribution
+with a verified developer identity requires Developer ID signing and Apple notarization.
 
 ---
 
@@ -114,7 +120,7 @@ sudo apt-get install build-essential pkg-config libxcb-render0-dev libxcb-shape0
 The same build commands work on all three platforms:
 
 ```sh
-git clone https://github.com/Lumid-Off/AirCard-Windows.git
+git clone https://github.com/kitan-shiragami/AirCard-Windows.git
 cd AirCard-Windows
 cargo test --locked
 cargo build --release --locked
@@ -122,6 +128,35 @@ cargo build --release --locked
 
 Output: `target/release/aircard.exe` on Windows, `target/release/aircard` on macOS/Linux.
 CI builds and tests Windows x64, Linux x64, macOS Intel, and macOS Apple Silicon separately.
+
+### Build a macOS DMG
+
+Run on macOS with Python 3, Rust, and Xcode Command Line Tools installed:
+
+```sh
+# Build for the Mac's native hardware, even when the terminal runs under Rosetta
+python3 scripts/package-macos.py
+
+# Explicitly build an Apple Silicon Release and DMG
+rustup target add aarch64-apple-darwin
+python3 scripts/package-macos.py --target aarch64-apple-darwin
+
+# Or package an already-built binary (also used by CI)
+python3 scripts/package-macos.py --binary target/aarch64-apple-darwin/release/aircard
+```
+
+Install the Rust target for the desired architecture first with `rustup target add`.
+The build uses an explicit target, so ARM64 binaries are under
+`target/aarch64-apple-darwin/release/aircard`, and Intel binaries are under
+`target/x86_64-apple-darwin/release/aircard`.
+The script checks the executable's architecture and writes `dist/aircard-macos-x64.dmg`
+or `dist/aircard-macos-arm64.dmg`. A universal binary produces `aircard-macos-universal.dmg`.
+Each image includes **AirCard.app**, an **Applications** shortcut, and installation instructions.
+The script validates the app's ad-hoc signature and the compressed disk image before publishing
+the local artifact. It does not perform Developer ID signing or notarization.
+
+### Runtime checks and saved data
+
 Hardware-dependent tests are ignored by default. To check the macOS framework loader
 without accessing a phone:
 

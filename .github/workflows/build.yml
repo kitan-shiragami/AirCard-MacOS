@@ -69,8 +69,12 @@ jobs:
           New-Item -ItemType Directory -Force dist
           Copy-Item target/${{ matrix.target }}/release/aircard.exe dist/aircard.exe
 
-      - name: Package Unix binary
-        if: runner.os != 'Windows'
+      - name: Package macOS disk image
+        if: runner.os == 'macOS'
+        run: python3 scripts/package-macos.py --binary target/${{ matrix.target }}/release/aircard
+
+      - name: Package Linux binary
+        if: runner.os == 'Linux'
         run: |
           mkdir -p dist
           tar -czf dist/aircard-${{ matrix.name }}.tar.gz -C target/${{ matrix.target }}/release aircard
