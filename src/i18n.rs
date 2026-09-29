@@ -77,30 +77,46 @@ impl Language {
             "Language changed." => "语言已切换。",
             "Transport mode" => "连接方式",
             "entries" => "条记录",
-            "Ready. Connect iPhone via USB or paired WiFi and unlock it." => "就绪。请通过 USB 或已配对的 WiFi 连接并解锁 iPhone。",
-            "No iPhone connected via USB or paired WiFi." => "未检测到通过 USB 或已配对 WiFi 连接的 iPhone。",
+            "Ready. Connect iPhone via USB or paired WiFi and unlock it." => {
+                "就绪。请通过 USB 或已配对的 WiFi 连接并解锁 iPhone。"
+            }
+            "No iPhone connected via USB or paired WiFi." => {
+                "未检测到通过 USB 或已配对 WiFi 连接的 iPhone。"
+            }
             "Please select a connected iPhone." => "请选择已连接的 iPhone。",
-            "Disconnect the USB cable and refresh to guarantee the full AirTraffic path uses WiFi." => "请断开 USB 线并刷新，以确保完整的 AirTraffic 路径使用 WiFi。",
+            "Disconnect the USB cable and refresh to guarantee the full AirTraffic path uses WiFi." => {
+                "请断开 USB 线并刷新，以确保完整的 AirTraffic 路径使用 WiFi。"
+            }
             "Please enter or scan a target card hash." => "请输入或扫描目标卡片 Hash。",
             "Please choose a card skin image first." => "请先选择卡片皮肤图片。",
             "Crop position updated." => "裁切位置已更新。",
-            "Scanning syslog... Open Wallet or tap your card on iPhone." => "正在扫描 syslog... 请在 iPhone 上打开钱包并点击卡片。",
+            "Scanning syslog... Open Wallet or tap your card on iPhone." => {
+                "正在扫描 syslog... 请在 iPhone 上打开钱包并点击卡片。"
+            }
             "Syslog scanning stopped." => "syslog 扫描已停止。",
             "Writing card skin to iPhone..." => "正在将卡片皮肤写入 iPhone...",
             "Please select a .passthm theme file first." => "请先选择一个 .passthm 主题文件。",
             "Writing passcode theme buttons..." => "正在将锁屏密码主题按钮写入 iPhone...",
             "Syslog scan finished" => "syslog 扫描完成",
-            "Card skin successfully flashed! Force quit Wallet on iPhone and reopen it." => "卡片皮肤应用成功！请在 iPhone 上强制关闭并重新打开 Wallet。",
-            "Passcode theme applied! Lock your iPhone to view the new keypad." => "锁屏密码主题应用成功！锁定 iPhone 查看新的键盘样式。",
+            "Card skin successfully flashed! Force quit Wallet on iPhone and reopen it." => {
+                "卡片皮肤应用成功！请在 iPhone 上强制关闭并重新打开 Wallet。"
+            }
+            "Passcode theme applied! Lock your iPhone to view the new keypad." => {
+                "锁屏密码主题应用成功！锁定 iPhone 查看新的键盘样式。"
+            }
             "Card skin updated successfully!" => "卡片皮肤更新成功！",
             "Restoring original card face..." => "正在恢复原卡面...",
             "Restoring original card artwork..." => "正在恢复原卡面图片...",
             "Clearing .cache cache..." => "正在清理 .cache 缓存...",
             "Clearing .pkcache cache..." => "正在清理 .pkcache 缓存...",
             "Original card face restored successfully!" => "原卡面恢复成功！",
-            "Original card face restored. Force close Wallet and reopen it." => "原卡面已恢复。请强制关闭并重新打开 Wallet。",
+            "Original card face restored. Force close Wallet and reopen it." => {
+                "原卡面已恢复。请强制关闭并重新打开 Wallet。"
+            }
             "Original card backup not found." => "未找到原卡面备份。",
-            "Apply a card skin once to create an original backup." => "先应用一次卡片皮肤以创建原卡面备份。",
+            "Apply a card skin once to create an original backup." => {
+                "先应用一次卡片皮肤以创建原卡面备份。"
+            }
             "Passcode theme applied successfully!" => "锁屏密码主题应用成功！",
             "Failed to parse theme:" => "解析主题失败：",
             "Card captured" => "已捕获卡片",
@@ -115,7 +131,9 @@ impl Language {
             "connected device(s); transport mode:" => "台已连接设备；连接方式：",
             "Could not enumerate devices:" => "无法枚举设备：",
             "Selected iPhone has no" => "选中的 iPhone 没有",
-            "connection. Refresh devices or change transport mode." => "连接。请刷新设备或更改连接方式。",
+            "connection. Refresh devices or change transport mode." => {
+                "连接。请刷新设备或更改连接方式。"
+            }
             "Scanning syslog..." => "正在扫描 syslog...",
             "Open Wallet on iPhone and tap your card" => "请在 iPhone 上打开钱包并点击目标卡片",
             "Stop" => "停止",
@@ -129,8 +147,25 @@ impl Language {
             "Card Skin Artwork" => "卡片皮肤图片",
             "PNG, JPG, WebP - auto-scaled to 1536x969" => "PNG、JPG、WebP，将自动缩放到 1536x969",
             "Drag inside the preview to reposition the crop." => "在预览区域内拖动以调整裁切位置。",
+            "PNG, JPG, WebP - drag and zoom to frame your card" => {
+                "PNG、JPG、WebP，可拖动和缩放来调整卡面"
+            }
             "Choose Image..." => "选择图片...",
             "Export PNG" => "导出 PNG",
+            "Zoom" => "缩放",
+            "Fit Image" => "完整显示",
+            "Show the whole image; empty space is black" => "显示完整图片，空白区域将填充为黑色",
+            "Center" => "置中",
+            "Reset / Fill" => "重置／填满",
+            "Position" => "位置",
+            "Horizontal position: drag the value or click to type" => {
+                "水平位置：拖动数值或点击输入"
+            }
+            "Vertical position: drag the value or click to type" => "垂直位置：拖动数值或点击输入",
+            "Drag the image to reposition it. Use Zoom to resize." => {
+                "拖动图片调整位置，使用缩放调整大小。"
+            }
+            "Drag to move the image inside the card" => "拖动图片以调整卡面中的位置",
             "Write to iPhone" => "写入 iPhone",
             "Apply Card Skin" => "应用卡片皮肤",
             "Restore Original" => "恢复原卡面",
@@ -144,41 +179,74 @@ impl Language {
             "1536 x 969 px pass canvas" => "1536 x 969 像素卡片画布",
             "No artwork loaded" => "尚未加载图片",
             "No image" => "没有图片",
-            "After applying, force close Apple Wallet and reopen it." => "应用后，请强制关闭 Apple Wallet 并重新打开。",
+            "After applying, force close Apple Wallet and reopen it." => {
+                "应用后，请强制关闭 Apple Wallet 并重新打开。"
+            }
             "Passcode Theme" => "锁屏密码主题",
-            "Custom lockscreen keypad from Cowabunga or Nugget" => "来自 Cowabunga 或 Nugget 的自定义锁屏键盘",
+            "Custom lockscreen keypad from Cowabunga or Nugget" => {
+                "来自 Cowabunga 或 Nugget 的自定义锁屏键盘"
+            }
             "Theme Package" => "主题包",
-            "Choose a .passthm archive containing dialer artwork" => "选择包含拨号键盘图片的 .passthm 压缩包",
+            "Choose a .passthm archive containing dialer artwork" => {
+                "选择包含拨号键盘图片的 .passthm 压缩包"
+            }
             "Choose .passthm..." => "选择 .passthm...",
             "assets" => "个资源",
             "Target iOS Cache" => "目标 iOS 缓存",
-            "Select cache format based on connected iOS version" => "根据连接设备的 iOS 版本选择缓存格式",
+            "Select cache format based on connected iOS version" => {
+                "根据连接设备的 iOS 版本选择缓存格式"
+            }
             "Auto (TelephonyUI-10)" => "自动（TelephonyUI-10）",
             "TelephonyUI-10 (iOS 18+)" => "TelephonyUI-10（iOS 18+）",
             "TelephonyUI-9 (iOS 16-17)" => "TelephonyUI-9（iOS 16-17）",
             "TelephonyUI-8 (Legacy)" => "TelephonyUI-8（旧版本）",
             "Keypad Language" => "键盘语言",
-            "Subtext alphabet layout (English, Russian, Ukrainian, Japanese, or Universal)" => "按键副文字母布局（英语、俄语、乌克兰语、日语或通用）",
+            "Subtext alphabet layout (English, Russian, Ukrainian, Japanese, or Universal)" => {
+                "按键副文字母布局（英语、俄语、乌克兰语、日语或通用）"
+            }
             "Russian" => "俄语",
             "Ukrainian" => "乌克兰语",
             "Japanese" => "日语",
             "All Languages (Universal)" => "全部语言（通用）",
             "Bold Text (iOS Accessibility)" => "粗体文字（iOS 辅助功能）",
-            "Generates *-bold.png for devices with Bold Text turned ON in iPhone Settings -> Display" => "为 iPhone 设置 -> 显示与亮度中启用粗体文字的设备生成 *-bold.png",
+            "Generates *-bold.png for devices with Bold Text turned ON in iPhone Settings -> Display" => {
+                "为 iPhone 设置 -> 显示与亮度中启用粗体文字的设备生成 *-bold.png"
+            }
             "Apply Passcode Theme" => "应用锁屏密码主题",
             "Keypad Preview" => "键盘预览",
             "Dialer button artwork" => "拨号按钮图片",
             "No theme loaded" => "尚未加载主题",
             "3x4 Keypad" => "3x4 键盘",
             "No theme" => "没有主题",
-            "After applying, lock your iPhone to see the new keypad." => "应用后，请锁定 iPhone 查看新的键盘样式。",
+            "After applying, lock your iPhone to see the new keypad." => {
+                "应用后，请锁定 iPhone 查看新的键盘样式。"
+            }
             "Setup & Card Hash Guide" => "设置与卡片 Hash 指南",
-            "Everything you need to connect and capture your card" => "连接设备并捕获卡片所需的全部信息",
+            "Everything you need to connect and capture your card" => {
+                "连接设备并捕获卡片所需的全部信息"
+            }
             "Prerequisites" => "使用前准备",
-            "- 64-bit iTunes or Apple Mobile Device Support installed" => "- 已安装 64 位 iTunes 或 Apple Mobile Device Support",
-            "- First-time setup: connect by USB and tap \"Trust this Computer\"" => "- 首次使用：通过 USB 连接并点击“信任此电脑”",
-            "- WiFi: enable WiFi sync, then use the same local network" => "- WiFi：启用 WiFi 同步，并确保双方处于同一局域网",
-            "- Select Auto, USB only, or WiFi only in the top bar" => "- 在顶部栏选择自动、仅 USB 或仅 WiFi",
+            "Install 64-bit iTunes / Apple Mobile Device Support, then connect and trust your iPhone." => {
+                "请安装 64 位 iTunes／Apple Mobile Device Support，然后连接并信任 iPhone。"
+            }
+            "Connect your iPhone by USB and trust it in Finder and on the phone. Uses macOS Apple frameworks." => {
+                "请通过 USB 连接 iPhone，并在 Finder 和手机上信任连接。此功能使用 macOS 的 Apple 框架。"
+            }
+            "Linux supports image and theme previews. Device scanning and applying themes require Windows or macOS; Apple's AirTraffic runtime is unavailable on Linux." => {
+                "Linux 支持图片与主题预览。扫描设备和应用主题需要 Windows 或 macOS；Linux 无法使用 Apple 的 AirTraffic 运行环境。"
+            }
+            "- 64-bit iTunes or Apple Mobile Device Support installed" => {
+                "- 已安装 64 位 iTunes 或 Apple Mobile Device Support"
+            }
+            "- First-time setup: connect by USB and tap \"Trust this Computer\"" => {
+                "- 首次使用：通过 USB 连接并点击“信任此电脑”"
+            }
+            "- WiFi: enable WiFi sync, then use the same local network" => {
+                "- WiFi：启用 WiFi 同步，并确保双方处于同一局域网"
+            }
+            "- Select Auto, USB only, or WiFi only in the top bar" => {
+                "- 在顶部栏选择自动、仅 USB 或仅 WiFi"
+            }
             "Finding Your Card Hash" => "查找卡片 Hash",
             "1. Click \"Scan\" in the Wallet tab" => "1. 在钱包页点击“扫描”",
             "2. Open Apple Wallet on your iPhone" => "2. 在 iPhone 上打开 Apple Wallet",
@@ -188,15 +256,27 @@ impl Language {
             "Activation & Theme Guide" => "应用与主题指南",
             "Applying skins and dialer keypad packages" => "应用卡片皮肤和拨号键盘主题",
             "Activating Apple Wallet Skin" => "应用 Apple Wallet 皮肤",
-            "1. Click \"Apply Card Skin\" and wait for completion" => "1. 点击“应用卡片皮肤”并等待完成",
-            "2. Open App Switcher on iPhone (swipe up from bottom)" => "2. 在 iPhone 上打开 App 切换器（从底部向上滑动）",
-            "3. Force close Apple Wallet by swiping up on it" => "3. 向上滑动并强制关闭 Apple Wallet",
+            "1. Click \"Apply Card Skin\" and wait for completion" => {
+                "1. 点击“应用卡片皮肤”并等待完成"
+            }
+            "2. Open App Switcher on iPhone (swipe up from bottom)" => {
+                "2. 在 iPhone 上打开 App 切换器（从底部向上滑动）"
+            }
+            "3. Force close Apple Wallet by swiping up on it" => {
+                "3. 向上滑动并强制关闭 Apple Wallet"
+            }
             "4. Reopen Wallet - your new skin appears!" => "4. 重新打开钱包，即可看到新的皮肤！",
             "Passcode Themes (.passthm)" => "锁屏密码主题（.passthm）",
-            "- Compatible with Cowabunga & Nugget theme packages" => "- 兼容 Cowabunga 和 Nugget 主题包",
-            "- iOS 18+: Select \"Auto (TelephonyUI-10)\"" => "- iOS 18+：选择“自动（TelephonyUI-10）”",
+            "- Compatible with Cowabunga & Nugget theme packages" => {
+                "- 兼容 Cowabunga 和 Nugget 主题包"
+            }
+            "- iOS 18+: Select \"Auto (TelephonyUI-10)\"" => {
+                "- iOS 18+：选择“自动（TelephonyUI-10）”"
+            }
             "- iOS 16-17: Select \"TelephonyUI-9\"" => "- iOS 16-17：选择“TelephonyUI-9”",
-            "- Lock screen to verify your updated keypad artwork" => "- 锁定屏幕以查看更新后的键盘图片",
+            "- Lock screen to verify your updated keypad artwork" => {
+                "- 锁定屏幕以查看更新后的键盘图片"
+            }
             _ => source,
         }
     }

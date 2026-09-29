@@ -133,7 +133,10 @@ where
 
         let device_path = format!("{pkpass_dir}/{asset}");
         if !afc.exists(&device_path) {
-            log(&format!("Original card asset not present on device: {}", asset));
+            log(&format!(
+                "Original card asset not present on device: {}",
+                asset
+            ));
             continue;
         }
 
@@ -147,16 +150,15 @@ where
     }
 
     if available_assets == 0 {
-        log("Original Wallet card directory exists, but no backup artwork assets are available; continuing without a restore backup.");
+        log(
+            "Original Wallet card directory exists, but no backup artwork assets are available; continuing without a restore backup.",
+        );
     }
 
     Ok(Some(resolved_hash))
 }
 
-pub fn load_original_assets(
-    udid: &str,
-    card_hash: &str,
-) -> Result<Vec<(String, Vec<u8>)>> {
+pub fn load_original_assets(udid: &str, card_hash: &str) -> Result<Vec<(String, Vec<u8>)>> {
     let dir = backup_dir(udid, card_hash);
     let mut assets = Vec::new();
 
@@ -171,7 +173,10 @@ pub fn load_original_assets(
     }
 
     if assets.is_empty() {
-        bail!("Original card face backup not found for card hash {}", card_hash);
+        bail!(
+            "Original card face backup not found for card hash {}",
+            card_hash
+        );
     }
 
     Ok(assets)
