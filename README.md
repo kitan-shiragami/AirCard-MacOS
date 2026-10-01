@@ -94,11 +94,11 @@ If both transports are available, **Auto** uses USB first and falls back to WiFi
 3. On your iPhone:
    - Open **Apple Wallet** (or double-click the Side/Power button).
    - Tap the card you want to customize.
-   - AirCard intercepts and saves the card hash automatically. Click **Stop**.
-4. Click **Choose Image...** to pick your artwork (PNG, JPG, or WebP).
-5. In **Wallet Preview**, drag the image to reposition it and adjust **Zoom** to resize it. Use **Position X / Y** for precise offsets. **Fit Image** shows the entire image with black margins; **Center** recenters it, and **Reset / Fill** restores the default centered crop.
-6. Click **Apply Card Skin**. The current framing is used for both device artwork and **Export PNG**, at `1536 × 969`.
-7. The first apply stores a local backup of the original card face. Use **Restore Original** later to write it back and invalidate Wallet's cached artwork.
+   - AirCard intercepts and saves the card hash automatically, stops scanning, reads the current artwork, and displays it in **Wallet Preview**.
+4. Click **Save Current Card PNG...** to save the original artwork loaded from the iPhone directly as a `.png` file. PDF-only cards use their embedded Wallet preview artwork and are converted to a 1536 × 969 PNG.
+5. Click **Choose Image...** to pick your replacement artwork (PNG, JPG, or WebP). Wallet Preview switches to the replacement image.
+6. In **Wallet Preview**, drag the replacement image to reposition it and adjust **Zoom** to resize it. Use **Position X / Y** for precise offsets. **Fit Image** shows the entire image with black margins, **Center** recenters it, and **Reset / Fill** restores the default centered crop. Use **Reset to Original** to discard the selected replacement and show the current on-device card artwork again.
+7. Click **Apply Card Skin**. AirCard attempts to create an automatic safety backup before replacing the artwork. The current framing is used for both device artwork and **Export PNG**, at `1536 × 969`. When a backup is available, **Restore Original** writes it back and invalidates Wallet's cached artwork.
 8. Force-close the **Wallet** app on your iPhone from the App Switcher (swipe up from bottom, then swipe Wallet away) and reopen Wallet to see your new card!
 
 ---
@@ -186,6 +186,13 @@ Saved card data is stored in:
 - Windows: `%LOCALAPPDATA%\AirCard\cards.json`
 - macOS: `~/Library/Application Support/AirCard/cards.json`
 - Linux: `$XDG_DATA_HOME/AirCard/cards.json`, or `~/.local/share/AirCard/cards.json`.
+
+Original Wallet artwork backups are stored in the `backups/<card-hash>/<timestamp>/`
+directory beside `cards.json`. Each backup contains the raw artwork assets plus a
+`backup.json` manifest. These are the current on-device files that AirCard replaces;
+they may already contain a previously applied custom skin. The manual
+**Save Current Card PNG...** action writes the loaded original artwork directly to
+the selected `.png` file.
 
 ---
 

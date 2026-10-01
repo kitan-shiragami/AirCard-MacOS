@@ -2,11 +2,59 @@ use std::io::Cursor;
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use base64::Engine;
 use eframe::egui;
 use image::{DynamicImage, ImageFormat, imageops::FilterType};
 
 pub const CARD_WIDTH: u32 = 1_536;
 pub const CARD_HEIGHT: u32 = 969;
+
+pub fn card_artwork_to_png(source_name: &str, data: &[u8]) -> Result<Vec<u8>> {
+    if source_name.to_ascii_lowercase().ends_with(".png") {
+        image::load_from_memory(data).context("Could not decode current card PNG")?;
+        return Ok(data.to_vec());
+    }
+    anyhow::ensure!(
+        source_name.to_ascii_lowercase().ends_with(".pdf"),
+        "Unsupported current card artwork format: {source_name}"
+    );
+    pdf_thumbnail_to_png(data)
+}
+
+fn pdf_thumbnail_to_png(pdf: &[u8]) -> Result<Vec<u8>> {
+    const START: &[u8] = b"<xmpGImg:image>";
+    const END: &[u8] = b"</xmpGImg:image>";
+
+    let start = pdf
+        .windows(START.len())
+        .position(|window| window == START)
+        .map(|position| position + START.len())
+        .context("Current card PDF has no embedded preview image")?;
+    let end = pdf[start..]
+        .windows(END.len())
+        .position(|window| window == END)
+        .map(|position| start + position)
+        .context("Current card PDF preview image is incomplete")?;
+    let encoded = std::str::from_utf8(&pdf[start..end])
+        .context("Current card PDF preview metadata is not UTF-8")?
+        .replace("&#xA;", "")
+        .replace("&#10;", "")
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect::<String>();
+    let preview = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .context("Could not decode the current card PDF preview image")?;
+    let image = image::load_from_memory(&preview)
+        .context("Could not decode the current card PDF preview artwork")?
+        .to_rgb8();
+    let resized = image::imageops::resize(&image, CARD_WIDTH, CARD_HEIGHT, FilterType::Lanczos3);
+    let mut png = Vec::new();
+    DynamicImage::ImageRgb8(resized)
+        .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+        .context("Could not encode the current card PDF preview as PNG")?;
+    Ok(png)
+}
 
 /// Image placement in card coordinates. Zoom 1 fills the card; Fit shows the full image.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -217,6 +265,34 @@ mod tests {
                 _ => [0, 0, 255, 255],
             })
         }))
+    }
+
+    #[test]
+    fn current_card_artwork_supports_png_and_pdf_preview_metadata() {
+        let source =
+            DynamicImage::ImageRgb8(image::RgbImage::from_pixel(2, 1, image::Rgb([220, 40, 30])));
+        let mut source_png = Vec::new();
+        source
+            .write_to(&mut Cursor::new(&mut source_png), ImageFormat::Png)
+            .unwrap();
+        assert_eq!(
+            card_artwork_to_png("cardBackgroundCombined@2x.png", &source_png).unwrap(),
+            source_png
+        );
+
+        let mut thumbnail_jpeg = Vec::new();
+        source
+            .write_to(&mut Cursor::new(&mut thumbnail_jpeg), ImageFormat::Jpeg)
+            .unwrap();
+        let encoded = base64::engine::general_purpose::STANDARD.encode(thumbnail_jpeg);
+        let pdf = format!(
+            "%PDF-1.4\n<xmpGImg:image>\n{}&#xA;\n</xmpGImg:image>\n%%EOF",
+            encoded
+        );
+        let converted = card_artwork_to_png("cardBackgroundCombined.pdf", pdf.as_bytes()).unwrap();
+        let converted = image::load_from_memory(&converted).unwrap().to_rgb8();
+        assert_eq!(converted.dimensions(), (CARD_WIDTH, CARD_HEIGHT));
+        assert!(converted.get_pixel(CARD_WIDTH / 2, CARD_HEIGHT / 2)[0] > 180);
     }
 
     #[test]
